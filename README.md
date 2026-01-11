@@ -1,94 +1,177 @@
-# AI-Contract-Analysis-Chat-API
-A Spring Boot REST API that analyzes legal contracts in PDF format using AI and enables conversational Q&amp;A over the analyzed content using a Retrieval-Augmented Generation (RAG) approach.
-
 🧠 AI Contract Analysis & Chat API
 
-Version: 1.0.0-RELEASE
-Status: ✅ Production Ready
-Date: 2026-01-11
+Versión: 1.0.0-RELEASE
+Estado: ✅ Lista para Producción
+Fecha: 2026-01-11
 
-A Spring Boot REST API that analyzes legal contracts in PDF format using AI and enables conversational Q&A over the analyzed content using a Retrieval-Augmented Generation (RAG) approach.
+Una API REST desarrollada con Spring Boot que analiza contratos legales en formato PDF utilizando inteligencia artificial y permite realizar preguntas conversacionales sobre el contenido analizado mediante un enfoque de Generación Aumentada por Recuperación (RAG).
 
-✅ Final Project Status
-Component	Technology	Status
-Web Framework	Spring MVC (Servlet stack)	✅ Working
-Server	Tomcat 10.1	✅ Port 1505
-Threading Model	Thread-per-request	✅ Synchronous
-File Upload	MultipartFile	✅ Supported
-PDF Extraction	Apache PDFBox 3.0.6	✅ Working
-AI Analysis	LangChain4j + GPT-4	✅ Working
-RAG Chat	Embeddings + Vector Search	✅ Working
-Build	Maven	✅ BUILD SUCCESS
+## 🏗️ Arquitectura de la Aplicación
 
+### Stack Tecnológico
+```
+┌─────────────────────────────────────────┐
+│ Frontend: Postman (API Testing)        │
+└──────────────┬──────────────────────────┘
+               ↓ HTTP/REST
+┌─────────────────────────────────────────┐
+│ Spring Boot 3.5.9                       │
+│ - Spring MVC (web tradicional)          │
+│ - Tomcat embebido                       │
+│ - @RestController endpoints             │
+└──────────────┬──────────────────────────┘
+               ↓
+┌─────────────────────────────────────────┐
+│ Business Layer                          │
+│ - ContractAnalysisService               │
+│ - ContractChatService                   │
+│ - PdfExtractor                          │
+└──────────────┬──────────────────────────┘
+               ↓
+┌─────────────────────────────────────────┐
+│ AI Integration Layer (LangChain4j)      │
+│ - ContractAnalysisAssistant (análisis)  │
+│ - ContractChatAssistant (chat RAG)      │
+└──────────────┬──────────────────────────┘
+               ↓
+┌─────────────────────────────────────────┐
+│ External Services                       │
+│ - OpenAI GPT-4o (análisis)              │
+│ - OpenAI text-embedding-3-large (RAG)   │
+└─────────────────────────────────────────┘
+```
 
-🔌 API Endpoints
-POST /api/contracts/analyze
+### Flujo de Datos - Análisis de Contrato
+```
+PDF File → MultipartFile → byte[] → PDFBox → String (text)
+    ↓
+LangChain4j → OpenAI GPT-4 → JSON Response
+    ↓
+ContractAnalysis Object → Cliente (JSON)
+```
 
-Description:
-Uploads and analyzes a contract PDF, extracting structured information.
+### Flujo de Datos - Chat RAG
+```
+Contract Text → DocumentSplitter → Chunks (500 chars)
+    ↓
+OpenAI Embeddings → Vector Store (en memoria)
+    ↓
+User Question → Embedding → Similarity Search → Top 3 Chunks
+    ↓
+Chunks + Question → GPT-4 → Answer → Cliente
+```
 
-Request
+---
 
+## 📂 Estructura del Proyecto
+
+```
+src/main/java/com/ai/_ojo/
+├── Application.java                    # Entry point
+├── ai/
+│   ├── AiConfig.java                   # Configuración de beans IA
+│   ├── ContractAnalysisAssistant.java  # Interface para análisis
+│   └── ContractChatAssistant.java      # Interface para chat
+├── controller/
+│   └── ContractController.java         # REST endpoints
+├── service/
+│   ├── ContractAnalysisService.java    # Lógica de análisis
+│   ├── ContractChatService.java        # Lógica de chat
+│   └── ContractChatServiceFactory.java # Crea instancias RAG
+├── domain/
+│   ├── ContractAnalysis.java           # DTO principal
+│   ├── Parties.java                    # Partes del contrato
+│   ├── KeyDates.java                   # Fechas importantes
+│   ├── FinancialTerms.java             # Términos financieros
+│   ├── KeyClause.java                  # Cláusulas importantes
+│   ├── ClauseType.java                 # Enum de tipos
+│   └── RiskLevel.java                  # Enum de riesgo
+├── dto/
+│   ├── ChatRequest.java                # Request para chat
+│   └── ChatResponse.java               # Response de chat
+└── pdfextractor/
+    └── PdfExtractor.java               # Extracción de texto PDF
+```
+
+---
+
+## 🔌 API Endpoints
+
+### POST /api/contracts/analyze
+**Función:** Analiza un contrato PDF y extrae información estructurada
+
+**Request:**
+```http
 POST http://localhost:1505/api/contracts/analyze
 Content-Type: multipart/form-data
 
-file: contract.pdf
+file: [archivo.pdf]
+```
 
-
-Response (200 OK)
-
+**Response (200 OK):**
+```json
 {
   "contractType": "Service Agreement",
-  "summary": "This contract establishes...",
+  "summary": "Este contrato establece...",
   "parties": {
-    "partyA": "Company A Ltd.",
-    "partyB": "Tech Provider Inc."
+    "partyA": "Empresa A S.A.",
+    "partyB": "Proveedor Tech Inc."
   },
   "keyDates": {
     "effectiveDate": "2024-01-01",
     "expirationDate": "2026-12-31"
   },
-  "duration": "3 years",
+  "duration": "3 años",
   "financialTerms": {
-    "totalAmount": 500000,
+    "totalAmount": 500000.0,
     "currency": "USD",
-    "paymentSchedule": "Quarterly"
+    "paymentSchedule": "Trimestral"
   },
   "keyClauses": [
     {
       "type": "TERMINATION",
-      "summary": "Either party may terminate with 60 days notice",
+      "summary": "Cualquier parte puede terminar con 60 días de aviso",
       "riskLevel": "MEDIUM"
+    },
+    {
+      "type": "LIABILITY",
+      "summary": "Responsabilidad limitada al valor del contrato",
+      "riskLevel": "LOW"
     }
   ],
   "specialNotes": [
-    "Subject to annual review"
+    "Sujeto a revisión anual",
+    "Incluye soporte técnico 24/7"
   ]
 }
+```
 
-POST /api/contracts/chat
+### POST /api/contracts/chat
+**Función:** Pregunta sobre el contrato previamente analizado
 
-Description:
-Ask questions about the previously analyzed contract.
-
-Request
-
+**Request:**
+```http
 POST http://localhost:1505/api/contracts/chat
 Content-Type: application/json
 
 {
-  "question": "What are the provider obligations?"
+  "question": "¿Cuáles son las obligaciones del proveedor?"
 }
+```
 
-
-Response
-
+**Response (200 OK):**
+```json
 {
-  "answer": "According to the contract, the provider must offer 24/7 support, ensure a maximum response time of 4 hours for critical incidents, perform monthly security updates, and deliver quarterly performance reports."
+  "answer": "Según el contrato, el proveedor tiene las siguientes obligaciones: 1) Proporcionar soporte técnico 24/7, 2) Mantener un tiempo de respuesta de máximo 4 horas para incidentes críticos, 3) Realizar actualizaciones de seguridad mensuales, y 4) Proveer reportes trimestrales de desempeño."
 }
+```
 
-🎓 Technical Concepts Implemented
-Dependency Injection
+---
+
+## 🎓 Conceptos Técnicos Implementados
+
+### 1. Dependency Injection (Spring)
+```java
 public ContractController(
     ContractAnalysisService analysisService,
     ContractChatServiceFactory chatServiceFactory
@@ -96,54 +179,28 @@ public ContractController(
     this.analysisService = analysisService;
     this.chatServiceFactory = chatServiceFactory;
 }
+```
 
-LangChain4j AI Services
+### 2. LangChain4j AI Services
+```java
 @UserMessage("""
-Analyze the following contract and return the result as JSON.
-Contract text: {{contractText}}
+    Analyze the following contract and return the result as JSON.
+    Contract text: {{contractText}}
 """)
 ContractAnalysis analyze(String contractText);
+```
 
-RAG Pipeline
-List<TextSegment> segments =
-    DocumentSplitters.recursive(500, 50).split(document);
+### 3. RAG (Retrieval Augmented Generation)
+```java
+// 1. Dividir documento
+List<TextSegment> segments = DocumentSplitters.recursive(500, 50)
+    .split(document);
 
-PDF Processing
-try (PDDocument document = Loader.loadPDF(bytes)) {
-    PDFTextStripper stripper = new PDFTextStripper();
-    return stripper.getText(document);
-}
+// 2. Crear embeddings
+Embedding embedding = embeddingModel.embed(segment).content();
 
-💰 Estimated OpenAI Costs
-Contract Analysis (GPT-4)
+// 3. Almacenar en vector store
+store.add(embedding, segment);
 
-Input ~5,000 tokens → $0.15
-
-Output ~500 tokens → $0.015
-Total: ~$0.165 per contract
-
-Chat Question (RAG)
-
-Embeddings → ~$0.0065
-
-GPT-4 input/output → ~$0.063
-Total: ~$0.07 per question
-
-Optimizations
-
-GPT-4o-mini for chat
-
-Cache analysis results
-
-Avoid re-embedding identical documents
-
-🚀 How to Run
-1. Set OpenAI API Key
-$env:OPENAI_API_KEY="sk-your-openai-key"
-
-2. Start Application
-.\iniciar-app.ps1
-
-3. Verify Startup
-Tomcat started on port(s): 1505 (http)
-Started Application in X seconds
+// 4. Buscar fragmentos relevantes
+ContentRetriever retriever = EmbeddingStoreContentRet
